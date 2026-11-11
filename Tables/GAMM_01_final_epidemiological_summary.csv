@@ -1,0 +1,2 @@
+"model","first_sustained_start","episode_duration_days","mean_loss_lb","mean_loss_pct","cumulative_loss_lb","max_loss_lb","max_loss_pct","max_loss_date","days_after_onset","recovery_date","recovery_run_days","pre_clinical_signal"
+"GAMM_01 (primary)","2024-06-16",7,5.259,5.98,36.8,21.581,24.2,"2024-06-27",8,"2024-08-28",23,"None"
