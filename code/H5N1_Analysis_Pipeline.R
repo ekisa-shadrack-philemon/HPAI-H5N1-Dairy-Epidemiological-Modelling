@@ -1,6 +1,5 @@
 # ==============================================================================
-# PROJECT: Longitudinal Analysis of Herd-Level Milk Production & H5N1 Dynamics
-# SCRIPT SECTION 1: Environment Setup, Constants, and Package Management
+# PROJECT: Longitudinal Analysis of Herd-Level Milk Production & Cell count relative to HPAI H5N1 outbreak on June 19, 2024
 # AUTHOR: Ekisa Shadrack Philemon et al.
 # INSTITUTION: Gulu University, Department of Mathematics
 # ==============================================================================
@@ -178,7 +177,7 @@ if (nrow(df_raw) < 10) {
   stop("The imported dataset contains too few observations.")
 }
 
-# Remove metadata header rows typical of automated dairy extracts
+# Remove metadata header rows
 df <- df_raw[-c(1, 2), , drop = FALSE]
 rownames(df) <- NULL
 
@@ -445,7 +444,7 @@ baseline_component_DOW   <- inspect_baseline_components(baseline_models$DOW, "wi
 cat("\nSection 3 completed successfully.\n\n")
 
 # ==============================================================================
-# SCRIPT SECTION 4: Fitting Intervention GAMMs & High-Resolution Visualizations
+# SECTION 4: Fitting Intervention GAMMs & High-Resolution Visualizations
 # ==============================================================================
 
 # 1. DEFINE INTERVENTION MODEL SPECIFICATIONS --------------------------------
@@ -517,7 +516,7 @@ fit_one_model <- function(spec, model_name) {
 final_models <- purrr::imap(model_specs, ~ fit_one_model(.x, .y))
 
 
-# 3. COUNTERFACTUAL & LOSS METRIC GENERATION -----------------------------------
+# 3. COUNTERFACTUAL & LOSS CALCULATIONS -----------------------------------
 
 build_model_results <- function(model_object, model_name) {
   baseline_col <- model_specs[[model_name]]$baseline
@@ -541,12 +540,12 @@ model_results <- purrr::imap(final_models, ~ build_model_results(.x, .y))
   plot_model_trajectory <- function(data, model_name, model_label) {
     
     p <- ggplot(data, aes(x = date)) +
-      # Time series curves (Observed upgraded with higher contrast color and weight)
+      # Time series curves
       geom_line(aes(y = milk_yield, colour = "Observed"), linewidth = 0.55, alpha = 0.70) +
       geom_line(aes(y = fitted_observed, colour = "Fitted"), linewidth = 0.95) +
       geom_line(aes(y = healthy_counterfactual, colour = "Healthy counterfactual"), linewidth = 1.05, linetype = "dashed") +
       
-      # Milestone reference lines
+      # Reference lines
       geom_vline(xintercept = CLINICAL_ONSET, linetype = "dashed", linewidth = 0.75, colour = "firebrick") +
       geom_vline(xintercept = LAB_CONFIRMATION, linetype = "dotdash", linewidth = 0.75, colour = "navy") +
       
@@ -612,11 +611,11 @@ model_metadata <- purrr::imap_dfr(
 
 cat("\nIntervention GAMMs fitted and plotted successfully with enhanced visual contrast.\n\n")
 
-# ==============================================================================
-# SCRIPT SECTION 5 & 6: Change-Point, Recovery, CIs, Loss Uncertainty & Second Wave
-# ==============================================================================
+# ================================================================================
+# SECTION 5 & 6: Change-Point, Recovery, CIs, Loss Uncertainty & Second Dectection
+# ================================================================================
 
-# 1. DEFINE HELPER FUNCTIONS FOR EPISODE & RECOVERY DETECTION ------------------
+# 1. DEFINE HELPER FUNCTIONS FOR RECOVERY DETECTION ------------------
 
 find_first_sustained_loss <- function(data, min_days = 7) {
   d <- data %>%
@@ -708,13 +707,13 @@ gamm_01_obj <- final_models[["GAMM_01"]]
 # Extract standard errors from the GAM model component
 pred_gamm01 <- predict(gamm_01_obj$gam, newdata = model_results[["GAMM_01"]], se.fit = TRUE)
 
-# Update primary model results with 95% confidence bounds on fit and propagated loss bounds
+# Update primary model results with 95% confidence bounds on fit and loss bounds
 model_results[["GAMM_01"]] <- model_results[["GAMM_01"]] %>%
   mutate(
     fit_se       = pred_gamm01$se.fit,
     fitted_lower = fitted_observed - (1.96 * fit_se),
     fitted_upper = fitted_observed + (1.96 * fit_se),
-    # Propagate uncertainty bounds for derived daily loss
+    # Uncertainty bounds for derived daily loss
     loss_se      = fit_se,
     loss_lower   = pmax(healthy_counterfactual - fitted_upper, 0),
     loss_upper   = pmax(healthy_counterfactual - fitted_lower, 0)
@@ -799,7 +798,7 @@ for (m_name in names(model_specs)) {
 cat("============================================================\n")
 
 
-# 6. APRIL 2025, LOSS UNCERTAINTY & PERMANENT COUNTERFACTUAL CROSSING -------
+# 6. APRIL 2025, LOSS UNCERTAINTY & FINAL RECOVERY ---------------
 
 second_detection_date <- as.Date("2025-04-01")
 
@@ -834,7 +833,7 @@ cat("\nFirst permanent date fitted yield matched/exceeded counterfactual:", form
 cat("============================================================\n\n")
 
 # ==============================================================================
-# SCRIPT SECTION 7: Exact Milestone Verification (Observed vs. Counterfactual)
+# SECTION 7: Exact Verification of Key Dates (Observed vs. Counterfactual)
 # ==============================================================================
 
 # 1. FUNCTION TO EXTRACT EXACT NUMBERS FOR ANY SPECIFIC DATE -------------------
@@ -915,7 +914,7 @@ cat("Full milestone comparison table saved to Results/exact_milestone_comparison
 cat("============================================================\n\n")
 
 # ==============================================================================
-# FINAL MASTER PUBLICATION FIGURE (POLISHED): GAMM_01 Trajectory & Milestones
+# FINAL MASTER PUBLICATION FIGURE: GAMM_01 Trajectory & Critical Events
 # ==============================================================================
 
 plot_final_publication_clean <- function() {
@@ -1013,7 +1012,7 @@ plot_final_publication_clean <- function() {
       legend.key.width = unit(1.5, "cm")
     ) +
     
-    # FIXED LEGEND: Using explicit character strings and full opacity to prevent broken keys
+    # FIXED LEGEND: 
     ggplot2::guides(
       colour = guide_legend(
         override.aes = list(
@@ -1030,7 +1029,7 @@ plot_final_publication_clean <- function() {
       colour = NULL
     )
   
-  # ----- Staggered, Grounded Annotations -----
+  # ----- Annotations -----
   
   # 1. Clinical onset (Top Left of outbreak)
   p <- p + ggplot2::annotate(
@@ -1096,10 +1095,10 @@ plot_final_publication_clean <- function() {
 plot_final_publication_clean()
 
 # ==============================================================================
-# SECTION 18 — FINAL SUMMARY, DIAGNOSTICS, HERD LOSS & MILESTONE LOOKUPS
+# SECTION 18 — FINAL SUMMARY, DIAGNOSTICS, HERD LOSS & KEY EVENT LOOKUPS
 # ==============================================================================
 
-# 1. ESTABLISH PERMANENT COUNTERFACTUAL CROSSING DATE (first_exceed_date) -----
+# 1. ESTABLISH FINAL COUNTERFACTUAL CROSSING DATE (first_exceed_date) -----
 recovery_milestones <- model_results[["GAMM_01"]] %>%
   filter(date >= as.Date("2024-08-01")) %>%
   mutate(diff = fitted_observed - healthy_counterfactual)
@@ -1150,7 +1149,7 @@ write.csv(
 )
 
 
-# 4. DETAILED MILESTONE TABLE WITH COW COUNTS & HERD LOSSES ------------------
+# 4. DETAILED  TABLE WITH COW COUNTS & HERD LOSSES ------------------
 get_detailed_milestone_with_cows <- function(dat, target_date, model_name) {
   row_data <- dat %>% filter(date == as.Date(target_date))
   if (nrow(row_data) == 0) return(NULL)
@@ -1238,8 +1237,7 @@ diag_list <- purrr::imap(
 )
 
 
-# 6. 6-PANEL DIAGNOSTIC FIGURE WITH CLEAN JOURNAL TAGS (a)-(f) --------------
-# <-- REPLACE YOUR OLD make_six_panel() FUNCTION WITH THIS UPDATED BLOCK:
+# 6. 6-PANEL DIAGNOSTIC FIGURE WITH  TAGS (a)-(f) --------------
 
 make_six_panel <- function(diag_obj, title_prefix = "Primary model") {
   res   <- diag_obj$residuals
@@ -1313,7 +1311,7 @@ make_six_panel <- function(diag_obj, title_prefix = "Primary model") {
 make_six_panel(diag_list[["GAMM_01"]], title_prefix = "GAMM with AR(2)")
 
 
-# 7. FORMAL RESIDUAL STATISTICAL TESTS -----------------------------------------
+# 7. RESIDUAL STATISTICAL TESTS -----------------------------------------
 run_residual_tests <- function(diag_obj) {
   res <- diag_obj$residuals
   
@@ -1432,7 +1430,8 @@ write.csv(
   row.names = FALSE
 )
 
-cat("\n===== ENTIRE ANALYSIS PIPELINE & FINAL SECTION COMPLETED SUCCESSFULLY =====\n\n")
+cat("\n===== ANALYSIS PIPELINE & FINAL SECTION COMPLETED SUCCESSFULLY =====\n\n")
+
 
 
 cat("\n============================================================\n")
